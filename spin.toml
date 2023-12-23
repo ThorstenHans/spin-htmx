@@ -1,0 +1,29 @@
+spin_manifest_version = 2
+
+[application]
+name = "spin-htmx"
+version = "0.1.0"
+authors = ["Thorsten Hans <thorsten.hans@gmail.com>"]
+description = "A simple shopping list built with HTMX, Fermyon Spin & Rust"
+
+[[trigger.http]]
+route = "/api/..."
+component = "api"
+
+[[trigger.http]]
+route = "/..."
+component = "app"
+
+[component.app]
+source = { url = "https://github.com/fermyon/spin-fileserver/releases/download/v0.1.0/spin_static_fs.wasm", digest = "sha256:96c76d9af86420b39eb6cd7be5550e3cb5d4cc4de572ce0fd1f6a29471536cb4" }
+files = [{ source = "app", destination = "/" }]
+
+[component.api]
+source = "api/target/wasm32-wasi/release/api.wasm"
+allowed_outbound_hosts = []
+sqlite_databases = ["default"]
+
+[component.api.build]
+command = "cargo build --target wasm32-wasi --release"
+workdir = "api"
+watch = ["src/**/*.rs", "Cargo.toml"]
