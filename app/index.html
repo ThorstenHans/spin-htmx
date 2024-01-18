@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Spin 💜 HTMX</title>
+    <title>Shopping List</title>
     <link rel="stylesheet" href="/style.css">
 </head>
 <body>
     <header>
-        <h1>Spin 💜 HTMX | <small>Shopping List</small></h1>
-        <p class="slug">This is a simple shopping list for demonstrating the combination of <a href=""
-                target="_blank">HTMX</a> and <a href="" target="_blank">Fermyon Spin</a>.</p>
+        <h1>Shopping List | <small>powered by Spin &amp; HTMX</small></h1>
+        <p class="slug">This is a simple shopping list for demonstrating the combination of <a href="https://htmx.org/"
+                target="_blank">HTMX</a> and <a href="https://developer.fermyon.com" target="_blank">Fermyon Spin</a>.</p>
     </header>
     <main hx-get="/api/items" hx-trigger="load,newItem from:body" hx-target="#all-items" hx-swap="innerHtml">
         <div id="all-items" hx-confirm="Do you really want to delete this item?" hx-target="closest .item"
@@ -26,7 +26,7 @@
     </aside>
     <footer>
         <span>Made with 💜 by</span><a href="https://www.fermyon.com" target="_blank">Fermyon</a>
-        <span>Find the code on</span><a href="" target="_blank">GitHub</a>
+        <span>Find the code on</span><a href="https://github.com/ThorstenHans/spin-htmx" target="_blank">GitHub</a>
     </footer>
     <script src="/htmx.min.js"></script>
     <script src="json-enc.js"></script>
