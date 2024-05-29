@@ -1,13 +1,12 @@
+use anyhow::{Context, Result};
 use build_html::{Container, ContainerType, Html, HtmlContainer};
-use http::Response;
 use serde::{Deserialize, Serialize};
-use spin_sdk::http::{IntoResponse, Json, Params, Request, Router};
+use spin_sdk::http::{IntoResponse, Params, Request, Response, Router};
 use spin_sdk::http_component;
 use spin_sdk::sqlite::{Connection, Value};
 
 #[http_component]
-fn handle_api(req: Request) -> anyhow::Result<impl IntoResponse> {
-
+fn handle_api(req: Request) -> Result<impl IntoResponse> {
     // lets use the Router to handle requests based on method and path
     let mut r = Router::default();
     r.post("/api/items", add_new);
@@ -47,7 +46,7 @@ impl Html for Item {
     }
 }
 
-fn get_all(_r: Request, _p: Params) -> anyhow::Result<impl IntoResponse> {
+fn get_all(_r: Request, _p: Params) -> Result<impl IntoResponse> {
     let connection = Connection::open_default()?;
 
     let row_set = connection.execute("SELECT ID, VALUE FROM ITEMS ORDER BY ID DESC", &[])?;
@@ -64,39 +63,48 @@ fn get_all(_r: Request, _p: Params) -> anyhow::Result<impl IntoResponse> {
     Ok(Response::builder()
         .status(200)
         .header("Content-Type", "text/html")
-        .body(items)?)
+        .body(items)
+        .build())
 }
 
-fn add_new(req: http::Request<Json<Item>>, _params: Params) -> anyhow::Result<impl IntoResponse> {
-    let item = req.into_body().0;
+fn add_new(req: Request, _params: Params) -> Result<impl IntoResponse> {
+    let Ok(item): Result<Item> =
+        serde_json::from_reader(req.body()).with_context(|| "Error while deserializing payload")
+    else {
+        return Ok(Response::new(400, "Invalid payload received"));
+    };
     let connection = Connection::open_default()?;
     let parameters = &[Value::Text(item.value)];
     connection.execute("INSERT INTO ITEMS (VALUE) VALUES (?)", parameters)?;
     Ok(Response::builder()
         .status(200)
         .header("HX-Trigger", "newItem")
-        .body(())?)
+        .body(())
+        .build())
 }
 
-fn delete_one(_req: Request, params: Params) -> anyhow::Result<impl IntoResponse> {
+fn delete_one(_req: Request, params: Params) -> Result<impl IntoResponse> {
     let Some(id) = params.get("id") else {
-        return Ok(Response::builder().status(404).body("Missing identifier")?);
+        return Ok(Response::new(404, "Missing identifier"));
     };
     let Ok(id) = id.parse::<i64>() else {
-        return Ok(Response::builder()
-            .status(400)
-            .body("Unexpected identifier format")?);
+        return Ok(Response::new(400, "Unexpected identifier format"));
     };
 
     let connection = Connection::open_default()?;
     let parameters = &[Value::Integer(id)];
-    match connection.execute("DELETE FROM ITEMS WHERE ID = ?", parameters) {
-        Ok(_) => Ok(Response::default()),
-        Err(e) => {
-            println!("Error while deleting item: {}", e);
-            Ok(Response::builder()
-                .status(500)
-                .body("Error while deleting item")?)
-        }
-    }
+
+    Ok(
+        match connection.execute("DELETE FROM ITEMS WHERE ID = ?", parameters) {
+            // HTMX requires status 200 instead of 204
+            Ok(_) => Response::new(200, ()),
+            Err(e) => {
+                println!("Error while deleting item: {}", e);
+                Response::builder()
+                    .status(500)
+                    .body("Error while deleting item")
+                    .build()
+            }
+        },
+    )
 }
